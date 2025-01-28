@@ -66,6 +66,11 @@ namespace Chess
                         Console.ReadLine();
                     }
                 }
+
+                Console.Clear();
+                Screen.PrintBoard(match);
+
+                Console.WriteLine($"CHECKMATE! {match.ActualPlayer} wins!");
             }
             catch (BoardException exception)
             {

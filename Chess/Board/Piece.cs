@@ -47,5 +47,10 @@ namespace Chess.Board
         {
             Movements++;
         }
+
+        public void DecreaseMovements()
+        {
+            Movements--;
+        }
     }
 }

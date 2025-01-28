@@ -64,22 +64,47 @@ namespace Chess.ChessGame
         }
 
         public void MakeMove(Position origin, Position destination)
-        
         {
-            MovePiece(origin, destination);
+            Piece capturedPiece = MovePiece(origin, destination);
 
-            Turn++;
-            ChangeActualPlayer();
+            if (KingInCheck(ActualPlayer))
+            {
+                UndoMove(destination, origin);
 
-            KingInCheck();
+                throw new BoardException($"The {ActualPlayer} Player king is in check!");
+            }
+            else
+            {
+                CapturePiece(capturedPiece);
+
+                Check = KingInCheck(GetEnemyColor());
+
+                if (Checkmate(GetEnemyColor()))
+                {
+                    Finished = true;
+                }
+                else
+                {
+                    Turn++;
+                    ChangeActualPlayer();
+                }
+            }            
         }
 
-        public bool KingInCheck()
+        public bool KingInCheck(Color color)
         {
-            Color enemyColor = GetEnemyColor();
-            List<Piece> pieces = Board.GetPiecesFromColor(enemyColor);
+            Color enemyColor;
 
-            foreach (Piece piece in pieces)
+            if (color == ActualPlayer)
+            {
+                enemyColor = GetEnemyColor();
+            }
+            else
+            {
+                enemyColor = ActualPlayer;
+            }
+
+            foreach (Piece piece in Board.GetPiecesFromColor(enemyColor))
             {
                 bool[,] possibleMovements = piece.PossibleMovements();
 
@@ -89,36 +114,63 @@ namespace Chess.ChessGame
                     {
                         if (possibleMovements[line, column] && Board.GetPiece(line, column) is King && Board.GetPiece(line, column).Color != enemyColor)
                         {
-                            Check = true;
                             return true;
                         }
                     }
                 }
             }
 
-            Check = false;
             return false;
         }
 
-        private void MovePiece(Position origin, Position destination)
+        public bool Checkmate(Color color)
+        {
+            if (!KingInCheck(color))
+            {
+                return false;
+            }
+
+            foreach (Piece piece in Board.GetPiecesFromColor(color))
+            {
+                bool[,] possibleMovements = piece.PossibleMovements();
+
+                for (int line = 0; line < Board.Lines; line++)
+                {
+                    for (int column = 0; column < Board.Columns; column++)
+                    {
+                        if (possibleMovements[line, column])
+                        {
+                            Position origin = piece.Position;
+                            Position destination = new Position(line, column);
+
+                            Piece capturedPiece = MovePiece(piece.Position, destination);
+
+                            bool validateCheck = KingInCheck(color);
+
+                            UndoMove(destination, origin);
+
+                            if (!validateCheck)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private Piece MovePiece(Position origin, Position destination)
         {
             Piece piece = Board.RemovePiece(origin);
             Piece capturedPiece = Board.RemovePiece(destination);
 
             Board.PlacePiece(piece, destination);
 
-            if (KingInCheck())
-            {
-                UndoMove(destination, origin);
-
-                throw new BoardException($"The {ActualPlayer} Player king is in check!");
-            }
-            else
-            {
-                CapturePiece(capturedPiece);
-            }
-
             piece.IncreaseMoviments();
+
+            return capturedPiece;
         }
 
         private void UndoMove(Position origin, Position destination)
@@ -127,6 +179,8 @@ namespace Chess.ChessGame
             Piece capturedPiece = Board.RemovePiece(destination);
 
             Board.PlacePiece(piece, destination);
+
+            piece.DecreaseMovements();
         }
 
         private void ChangeActualPlayer()

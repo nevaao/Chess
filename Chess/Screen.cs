@@ -21,20 +21,22 @@ namespace Chess
                 {
                     if (match.Board.GetPiece(line, column) != null)
                     {
+                        Piece piece = match.Board.GetPiece(line, column);
+
                         if (possibleMoviments != null)
                         {
                             if (possibleMoviments[line, column])
                             {
-                                PrintPiece(match.Board.GetPiece(line, column), true, match.Check);
+                                PrintPiece(piece, true, match.KingInCheck(piece.Color));
                             }
                             else
                             {
-                                PrintPiece(match.Board.GetPiece(line, column), false, match.Check);
+                                PrintPiece(piece, false, match.KingInCheck(piece.Color));
                             }
                         }
                         else
                         {
-                            PrintPiece(match.Board.GetPiece(line, column), false, match.Check);
+                            PrintPiece(piece, false, match.KingInCheck(piece.Color));
                         }
                     }
                     else
@@ -78,7 +80,10 @@ namespace Chess
 
             Console.WriteLine();
 
-            PrintTurn(match);
+            if (!match.Finished)
+            {
+                PrintTurn(match);
+            }
         }
 
         private static void PrintPiece(Piece piece, bool possibleMovement = false, bool inCheck = false)
@@ -134,7 +139,7 @@ namespace Chess
 
         private static void PrintCapturedPieces(Match match)
         {
-            Console.Write("White: ");
+            Console.Write("White:");
             foreach (Piece piece in match.CapturedWhitePieces)
             {
                 PrintPiece(piece);
@@ -142,7 +147,7 @@ namespace Chess
 
             Console.WriteLine();
 
-            Console.Write("Black: ");
+            Console.Write("Black:");
             foreach (Piece piece in match.CapturedBlackPieces)
             {
                 PrintPiece(piece);
