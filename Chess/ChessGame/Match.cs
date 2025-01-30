@@ -65,17 +65,20 @@ namespace Chess.ChessGame
 
         public void MakeMove(Position origin, Position destination)
         {
-            Piece capturedPiece = MovePiece(origin, destination);
+            Piece piece = Board.GetPiece(origin);
+            Piece rook = Board.GetPiece(GetRookPositionForRoque(piece.Color, origin, destination));
 
-            if (KingInCheck(ActualPlayer))
+            bool roque = false;
+
+            if (piece is King && piece.Movements == 0 && rook.Movements == 0)
             {
-                UndoMove(destination, origin);
-
-                throw new BoardException($"The {ActualPlayer} Player king is in check!");
+                roque = ValidateRoque(piece, origin, destination);
             }
-            else
+
+            if (roque)
             {
-                CapturePiece(capturedPiece);
+                MovePiece(origin, destination);
+                MovePiece(rook.Position, GetRookDestinationForRoque(rook.Color, origin, destination));
 
                 Check = KingInCheck(GetEnemyColor());
 
@@ -88,21 +91,39 @@ namespace Chess.ChessGame
                     Turn++;
                     ChangeActualPlayer();
                 }
-            }            
+            }
+            else
+            {
+                Piece capturedPiece = MovePiece(origin, destination);
+
+                if (KingInCheck(ActualPlayer))
+                {
+                    UndoMove(destination, origin);
+
+                    throw new BoardException($"The {ActualPlayer} Player king is in check!");
+                }
+                else
+                {
+                    CapturePiece(capturedPiece);
+
+                    Check = KingInCheck(GetEnemyColor());
+
+                    if (Checkmate(GetEnemyColor()))
+                    {
+                        Finished = true;
+                    }
+                    else
+                    {
+                        Turn++;
+                        ChangeActualPlayer();
+                    }
+                }
+            }
         }
 
         public bool KingInCheck(Color color)
         {
-            Color enemyColor;
-
-            if (color == ActualPlayer)
-            {
-                enemyColor = GetEnemyColor();
-            }
-            else
-            {
-                enemyColor = ActualPlayer;
-            }
+            Color enemyColor = color == ActualPlayer ? GetEnemyColor() : ActualPlayer;
 
             foreach (Piece piece in Board.GetPiecesFromColor(enemyColor))
             {
@@ -164,6 +185,7 @@ namespace Chess.ChessGame
         private Piece MovePiece(Position origin, Position destination)
         {
             Piece piece = Board.RemovePiece(origin);
+
             Piece capturedPiece = Board.RemovePiece(destination);
 
             Board.PlacePiece(piece, destination);
@@ -181,6 +203,86 @@ namespace Chess.ChessGame
             Board.PlacePiece(piece, destination);
 
             piece.DecreaseMovements();
+        }
+
+        private bool ValidateRoque(Piece piece, Position origin, Position destination)
+        {
+            #region Moveu-se duas casas para a direita ou duas para a esquerda?
+            if (!(destination.Column == origin.Column + 2 || destination.Column == origin.Column - 2))
+            {
+                return false;
+            }
+            #endregion
+
+            #region O Rei está em xeque?
+            if (KingInCheck(ActualPlayer))
+            {
+                return false;
+            }
+            #endregion
+
+            #region O Rei ficará em xeque?
+            MovePiece(origin, destination);
+
+            if (KingInCheck(ActualPlayer))
+            {
+                UndoMove(destination, origin);
+
+                return false;
+            }
+
+            UndoMove(destination, origin);
+            #endregion
+
+            #region A casa ao lado do Rei está sendo controlada pelo adversário?
+            if (piece is King)
+            {
+                Position position;
+
+                if (destination.Column == origin.Column + 2)
+                {
+                    position = new Position(piece.Position.Line, piece.Position.Column + 1);
+                }
+                else
+                {
+                    position = new Position(piece.Position.Line, piece.Position.Column - 1);
+                }
+
+                foreach (Piece enemyPiece in Board.GetPiecesFromColor(GetEnemyColor()))
+                {
+                    bool[,] possibleMovements = enemyPiece.PossibleMovements();
+
+                    for (int line = 0; line < Board.Lines; line++)
+                    {
+                        for (int column = 0; column < Board.Columns; column++)
+                        {
+                            if (possibleMovements[position.Line, position.Column])
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            return true;
+        }
+
+        private Position GetRookPositionForRoque(Color color, Position origin, Position destination)
+        {
+            int line = color == Color.White ? 7 : 0;
+            int column = destination.Column > origin.Column ? 7 : 0;
+
+            return new Position(line, column);
+        }
+
+        private Position GetRookDestinationForRoque(Color color, Position origin, Position destination)
+        {
+            int line = color == Color.White ? 7 : 0;
+            int column = destination.Column > origin.Column ? origin.Column + 1 : origin.Column - 1;
+
+            return new Position(line, column);
         }
 
         private void ChangeActualPlayer()
@@ -228,7 +330,7 @@ namespace Chess.ChessGame
             Board.PlacePiece(new Knight(Color.Black, Board), new ChessPosition("B", 8).ToPosition());
             Board.PlacePiece(new Bishop(Color.Black, Board), new ChessPosition("C", 8).ToPosition());
             Board.PlacePiece(new Queen(Color.Black, Board), new ChessPosition("D", 8).ToPosition());
-            Board.PlacePiece(new King(Color.Black, Board), new ChessPosition("E", 8).ToPosition());
+            Board.PlacePiece(new King(Color.Black, Board, this), new ChessPosition("E", 8).ToPosition());
             Board.PlacePiece(new Bishop(Color.Black, Board), new ChessPosition("F", 8).ToPosition());
             Board.PlacePiece(new Knight(Color.Black, Board), new ChessPosition("G", 8).ToPosition());
             Board.PlacePiece(new Rook(Color.Black, Board), new ChessPosition("H", 8).ToPosition());
@@ -245,7 +347,7 @@ namespace Chess.ChessGame
             Board.PlacePiece(new Rook(Color.White, Board), new ChessPosition("A", 1).ToPosition());
             Board.PlacePiece(new Knight(Color.White, Board), new ChessPosition("B", 1).ToPosition());
             Board.PlacePiece(new Bishop(Color.White, Board), new ChessPosition("C", 1).ToPosition());
-            Board.PlacePiece(new King(Color.White, Board), new ChessPosition("D", 1).ToPosition());
+            Board.PlacePiece(new King(Color.White, Board, this), new ChessPosition("D", 1).ToPosition());
             Board.PlacePiece(new Queen(Color.White, Board), new ChessPosition("E", 1).ToPosition());
             Board.PlacePiece(new Bishop(Color.White, Board), new ChessPosition("F", 1).ToPosition());
             Board.PlacePiece(new Knight(Color.White, Board), new ChessPosition("G", 1).ToPosition());
