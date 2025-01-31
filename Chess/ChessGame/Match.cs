@@ -66,19 +66,22 @@ namespace Chess.ChessGame
         public void MakeMove(Position origin, Position destination)
         {
             Piece piece = Board.GetPiece(origin);
-            Piece rook = Board.GetPiece(GetRookPositionForRoque(piece.Color, origin, destination));
 
-            bool roque = false;
+            #region Special Move - Castle
+
+            Piece rook = Board.GetPiece(GetRookPositionForCastle(piece.Color, origin, destination));
+
+            bool isCastle = false;
 
             if (piece is King && piece.Movements == 0 && rook.Movements == 0)
             {
-                roque = ValidateRoque(piece, origin, destination);
+                isCastle = IsCastle(piece, origin, destination);
             }
 
-            if (roque)
+            if (isCastle)
             {
                 MovePiece(origin, destination);
-                MovePiece(rook.Position, GetRookDestinationForRoque(rook.Color, origin, destination));
+                MovePiece(rook.Position, GetRookDestinationForCastle(rook.Color, origin, destination));
 
                 Check = KingInCheck(GetEnemyColor());
 
@@ -89,34 +92,78 @@ namespace Chess.ChessGame
                 else
                 {
                     Turn++;
+                    RemoveAllEnPassant(GetEnemyColor());
                     ChangeActualPlayer();
                 }
+
+                return;
             }
-            else
+
+            #endregion
+
+            #region Special Move - En Passant
+
+            Position pawnPosition = GetPawnPositionForEnPassant(origin, destination);
+            Piece pawn;
+
+            bool isEnPassant = false;
+
+            if (Board.PieceExists(pawnPosition))
             {
-                Piece capturedPiece = MovePiece(origin, destination);
+                pawn = Board.GetPiece(pawnPosition);
 
-                if (KingInCheck(ActualPlayer))
+                if (pawn is Pawn)
                 {
-                    UndoMove(destination, origin);
+                    isEnPassant = IsEnPassant(destination, pawnPosition);
+                }
+            }
 
-                    throw new BoardException($"The {ActualPlayer} Player king is in check!");
+            if (isEnPassant)
+            {
+                MovePiece(origin, destination);
+                CapturePiece(Board.RemovePiece(pawnPosition));
+
+                Check = KingInCheck(GetEnemyColor());
+
+                if (Checkmate(GetEnemyColor()))
+                {
+                    Finished = true;
                 }
                 else
                 {
-                    CapturePiece(capturedPiece);
+                    Turn++;
+                    RemoveAllEnPassant(GetEnemyColor());
+                    ChangeActualPlayer();
+                }
 
-                    Check = KingInCheck(GetEnemyColor());
+                return;
+            }
 
-                    if (Checkmate(GetEnemyColor()))
-                    {
-                        Finished = true;
-                    }
-                    else
-                    {
-                        Turn++;
-                        ChangeActualPlayer();
-                    }
+            #endregion
+
+            Piece capturedPiece = MovePiece(origin, destination);
+
+            if (KingInCheck(ActualPlayer))
+            {
+                UndoMove(destination, origin);
+
+                throw new BoardException($"The {ActualPlayer} Player king is in check!");
+            }
+            else
+            {
+                CapturePiece(capturedPiece);
+
+                Check = KingInCheck(GetEnemyColor());
+
+                if (Checkmate(GetEnemyColor()))
+                {
+                    Finished = true;
+                }
+                else
+                {
+                    Turn++;
+                    RemoveAllEnPassant(GetEnemyColor());
+                    ChangeActualPlayer();
                 }
             }
         }
@@ -166,11 +213,11 @@ namespace Chess.ChessGame
 
                             Piece capturedPiece = MovePiece(piece.Position, destination);
 
-                            bool validateCheck = KingInCheck(color);
+                            bool inCheck = KingInCheck(color);
 
                             UndoMove(destination, origin);
 
-                            if (!validateCheck)
+                            if (!inCheck)
                             {
                                 return false;
                             }
@@ -182,13 +229,28 @@ namespace Chess.ChessGame
             return true;
         }
 
+        public Color GetEnemyColor()
+        {
+            if (ActualPlayer == Color.White)
+            {
+                return Color.Black;
+            }
+
+            return Color.White;
+        }
+
         private Piece MovePiece(Position origin, Position destination)
         {
             Piece piece = Board.RemovePiece(origin);
-
             Piece capturedPiece = Board.RemovePiece(destination);
 
             Board.PlacePiece(piece, destination);
+
+            if (piece is Pawn && (destination.Line == origin.Line + 2 || destination.Line == origin.Line - 2))
+            {
+                Pawn pawn = piece as Pawn;
+                pawn.EnPassant = true;
+            }
 
             piece.IncreaseMoviments();
 
@@ -202,26 +264,37 @@ namespace Chess.ChessGame
 
             Board.PlacePiece(piece, destination);
 
+            if (piece is Pawn)
+            {
+                Pawn pawn = piece as Pawn;
+                pawn.EnPassant = false;
+            }
+
             piece.DecreaseMovements();
         }
 
-        private bool ValidateRoque(Piece piece, Position origin, Position destination)
+        private bool IsCastle(Piece piece, Position origin, Position destination)
         {
-            #region Moveu-se duas casas para a direita ou duas para a esquerda?
+            #region Did the King move two positions to the side?
+
             if (!(destination.Column == origin.Column + 2 || destination.Column == origin.Column - 2))
             {
                 return false;
             }
+
             #endregion
 
-            #region O Rei está em xeque?
+            #region Is the King in check?
+
             if (KingInCheck(ActualPlayer))
             {
                 return false;
             }
+
             #endregion
 
-            #region O Rei ficará em xeque?
+            #region Will the King be in check?
+
             MovePiece(origin, destination);
 
             if (KingInCheck(ActualPlayer))
@@ -232,9 +305,11 @@ namespace Chess.ChessGame
             }
 
             UndoMove(destination, origin);
+
             #endregion
 
-            #region A casa ao lado do Rei está sendo controlada pelo adversário?
+            #region Is the Rook position being controlled by the enemy?
+
             if (piece is King)
             {
                 Position position;
@@ -264,12 +339,37 @@ namespace Chess.ChessGame
                     }
                 }
             }
+
             #endregion
 
             return true;
         }
 
-        private Position GetRookPositionForRoque(Color color, Position origin, Position destination)
+        private bool IsEnPassant(Position destination, Position pawnPosition)
+        {
+            if (!((destination.Line == pawnPosition.Line + 1 || destination.Line == pawnPosition.Line - 1) && pawnPosition.Column == destination.Column))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private void RemoveAllEnPassant(Color color)
+        {
+            List<Piece> enemyPieces = Board.GetPiecesFromColor(color);
+
+            foreach (Piece piece in enemyPieces)
+            {
+                if (piece is Pawn)
+                {
+                    Pawn pawn = piece as Pawn;
+                    pawn.EnPassant = false;
+                }
+            }
+        }
+
+        private Position GetRookPositionForCastle(Color color, Position origin, Position destination)
         {
             int line = color == Color.White ? 7 : 0;
             int column = destination.Column > origin.Column ? 7 : 0;
@@ -277,10 +377,23 @@ namespace Chess.ChessGame
             return new Position(line, column);
         }
 
-        private Position GetRookDestinationForRoque(Color color, Position origin, Position destination)
+        private Position GetRookDestinationForCastle(Color color, Position origin, Position destination)
         {
             int line = color == Color.White ? 7 : 0;
             int column = destination.Column > origin.Column ? origin.Column + 1 : origin.Column - 1;
+
+            return new Position(line, column);
+        }
+
+        private Position GetPawnPositionForEnPassant(Position origin, Position destination)
+        {
+            int line = origin.Line;
+            int column = destination.Column > origin.Column ? origin.Column + 1 : origin.Column - 1;
+
+            if (column < 0 || column > Board.Columns)
+            {
+                return origin;
+            }
 
             return new Position(line, column);
         }
@@ -312,16 +425,6 @@ namespace Chess.ChessGame
             }
         }
 
-        private Color GetEnemyColor()
-        {
-            if (ActualPlayer == Color.White)
-            {
-                return Color.Black;
-            }
-
-            return Color.White;
-        }
-
         private void PlacePieces()
         {
             #region Black Player
@@ -337,7 +440,7 @@ namespace Chess.ChessGame
 
             for (int column = 0; column < Board.Columns; column++)
             {
-                Board.PlacePiece(new Pawn(Color.Black, Board), new Position(1, column));
+                Board.PlacePiece(new Pawn(Color.Black, Board, this), new Position(1, column));
             }
 
             #endregion
@@ -355,7 +458,7 @@ namespace Chess.ChessGame
 
             for (int column = 0; column < Board.Columns; column++)
             {
-                Board.PlacePiece(new Pawn(Color.White, Board), new Position(6, column));
+                Board.PlacePiece(new Pawn(Color.White, Board, this), new Position(6, column));
             }
 
             #endregion

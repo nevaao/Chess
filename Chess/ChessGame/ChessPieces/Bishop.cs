@@ -13,6 +13,7 @@ namespace Chess.ChessGame.ChessPieces
             Position position = new Position(0, 0);
 
             #region Top Diagonal Right
+
             position.SetPosition(Position.Line - 1, Position.Column + 1);
             while (Board.ValidPosition(position) && MovementPermitted(position))
             {
@@ -26,9 +27,11 @@ namespace Chess.ChessGame.ChessPieces
                 position.Line--;
                 position.Column++;
             }
+
             #endregion
 
             #region Bottom Diagonal Right
+
             position.SetPosition(Position.Line + 1, Position.Column + 1);
             while (Board.ValidPosition(position) && MovementPermitted(position))
             {
@@ -42,9 +45,11 @@ namespace Chess.ChessGame.ChessPieces
                 position.Line++;
                 position.Column++;
             }
+
             #endregion
 
             #region Bottom Diagonal Left
+
             position.SetPosition(Position.Line + 1, Position.Column - 1);
             while (Board.ValidPosition(position) && MovementPermitted(position))
             {
@@ -58,9 +63,11 @@ namespace Chess.ChessGame.ChessPieces
                 position.Line++;
                 position.Column--;
             }
+
             #endregion
 
             #region Top Diagonal Left
+
             position.SetPosition(Position.Line - 1, Position.Column - 1);
             while (Board.ValidPosition(position) && MovementPermitted(position))
             {
@@ -74,6 +81,7 @@ namespace Chess.ChessGame.ChessPieces
                 position.Line--;
                 position.Column--;
             }
+
             #endregion
 
             return possibleMovements;

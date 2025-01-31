@@ -18,70 +18,87 @@ namespace Chess.ChessGame.ChessPieces
             Position position = new Position(0, 0);
 
             #region Up
+
             position.SetPosition(Position.Line - 1, Position.Column);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             { 
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Top Diagonal Right
+
             position.SetPosition(Position.Line - 1, Position.Column + 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Right
+
             position.SetPosition(Position.Line, Position.Column + 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Bottom Diagonal Right
+
             position.SetPosition(Position.Line + 1, Position.Column + 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Down
+
             position.SetPosition(Position.Line + 1, Position.Column);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Bottom Diagonal Left
+
             position.SetPosition(Position.Line + 1, Position.Column - 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Left
+
             position.SetPosition(Position.Line, Position.Column - 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region Top Diagonal Left
+
             position.SetPosition(Position.Line - 1, Position.Column - 1);
             if (Board.ValidPosition(position) && MovementPermitted(position))
             {
                 possibleMovements[position.Line, position.Column] = true;
             }
+
             #endregion
 
             #region White Castle Kingside
+
             position.SetPosition(Position.Line, Position.Column + 2);
             if (Board.ValidPosition(position) && MovementPermitted(position) && Color == Color.White && Movements == 0)
             {
@@ -92,9 +109,11 @@ namespace Chess.ChessGame.ChessPieces
                     possibleMovements[position.Line, position.Column] = true;
                 }
             }
+
             #endregion
 
             #region White Castle Queenside
+
             position.SetPosition(Position.Line, Position.Column - 2);
             if (Board.ValidPosition(position) && MovementPermitted(position) && Color == Color.White && Movements == 0)
             {
@@ -105,9 +124,11 @@ namespace Chess.ChessGame.ChessPieces
                     possibleMovements[position.Line, position.Column] = true;
                 }
             }
+
             #endregion
 
             #region Black Castle Kingside
+
             position.SetPosition(Position.Line, Position.Column - 2);
             if (Board.ValidPosition(position) && MovementPermitted(position) && Color == Color.Black && Movements == 0)
             {
@@ -118,9 +139,11 @@ namespace Chess.ChessGame.ChessPieces
                     possibleMovements[position.Line, position.Column] = true;
                 }
             }
+
             #endregion
 
             #region Black Castle Queenside
+
             position.SetPosition(Position.Line, Position.Column + 2);
             if (Board.ValidPosition(position) && MovementPermitted(position) && Color == Color.Black && Movements == 0)
             {
@@ -131,6 +154,7 @@ namespace Chess.ChessGame.ChessPieces
                     possibleMovements[position.Line, position.Column] = true;
                 }
             }
+
             #endregion
 
             return possibleMovements;

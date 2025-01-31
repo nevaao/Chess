@@ -41,8 +41,6 @@ namespace Chess.Board
             return false;
         }
 
-        public abstract bool[,] PossibleMovements();
-
         public void IncreaseMoviments()
         {
             Movements++;
@@ -52,5 +50,7 @@ namespace Chess.Board
         {
             Movements--;
         }
+
+        public abstract bool[,] PossibleMovements();
     }
 }
