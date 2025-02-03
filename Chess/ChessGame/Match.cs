@@ -66,6 +66,7 @@ namespace Chess.ChessGame
         public void MakeMove(Position origin, Position destination)
         {
             Piece piece = Board.GetPiece(origin);
+            Piece capturedPiece = null;
 
             #region Special Move - Castle
 
@@ -82,21 +83,6 @@ namespace Chess.ChessGame
             {
                 MovePiece(origin, destination);
                 MovePiece(rook.Position, GetRookDestinationForCastle(rook.Color, origin, destination));
-
-                Check = KingInCheck(GetEnemyColor());
-
-                if (Checkmate(GetEnemyColor()))
-                {
-                    Finished = true;
-                }
-                else
-                {
-                    Turn++;
-                    RemoveAllEnPassant(GetEnemyColor());
-                    ChangeActualPlayer();
-                }
-
-                return;
             }
 
             #endregion
@@ -108,7 +94,7 @@ namespace Chess.ChessGame
 
             bool isEnPassant = false;
 
-            if (Board.PieceExists(pawnPosition))
+            if (Board.ValidPosition(pawnPosition) && Board.PieceExists(pawnPosition))
             {
                 pawn = Board.GetPiece(pawnPosition);
 
@@ -122,26 +108,13 @@ namespace Chess.ChessGame
             {
                 MovePiece(origin, destination);
                 CapturePiece(Board.RemovePiece(pawnPosition));
-
-                Check = KingInCheck(GetEnemyColor());
-
-                if (Checkmate(GetEnemyColor()))
-                {
-                    Finished = true;
-                }
-                else
-                {
-                    Turn++;
-                    RemoveAllEnPassant(GetEnemyColor());
-                    ChangeActualPlayer();
-                }
-
-                return;
+            }
+            else
+            {
+                capturedPiece = MovePiece(origin, destination);
             }
 
             #endregion
-
-            Piece capturedPiece = MovePiece(origin, destination);
 
             if (KingInCheck(ActualPlayer))
             {
@@ -161,6 +134,25 @@ namespace Chess.ChessGame
                 }
                 else
                 {
+                    #region Special Move - Promotion
+
+                    if (piece is Pawn && (piece.Position.Line == 0 || piece.Position.Line == 7))
+                    {
+                        Console.WriteLine();
+
+                        Console.WriteLine("PROMOTION! Which piece will you promote your pawn to?");
+                        Console.WriteLine("[1] ♛\n[2] ♝\n[3] ♞\n[4] ♜");
+
+                        Console.WriteLine();
+
+                        Console.Write("Enter the piece number: ");
+                        int promotedPieceNumber = int.Parse(Console.ReadLine());
+
+                        PromotePiece(piece, promotedPieceNumber, ActualPlayer);
+                    }
+
+                    #endregion
+
                     Turn++;
                     RemoveAllEnPassant(GetEnemyColor());
                     ChangeActualPlayer();
@@ -271,6 +263,45 @@ namespace Chess.ChessGame
             }
 
             piece.DecreaseMovements();
+        }
+
+        private void PromotePiece(Piece piece, int number, Color color)
+        {
+            Position position = piece.Position;
+            Board.RemovePiece(position);
+
+            Piece promotedPiece;
+
+            switch (number)
+            {
+                case 1:
+                    {
+                        promotedPiece = new Queen(color, Board);
+                        break;
+                    }
+                case 2:
+                    {
+                        promotedPiece = new Bishop(color, Board);
+                        break;
+                    }
+                case 3:
+                    {
+                        promotedPiece = new Knight(color, Board);
+                        break;
+                    }
+                case 4:
+                    {
+                        promotedPiece = new Rook(color, Board);
+                        break;
+                    }
+                default:
+                    {
+                        promotedPiece = new Queen(color, Board);
+                        break;
+                    }
+            }
+
+            Board.PlacePiece(promotedPiece, position);
         }
 
         private bool IsCastle(Piece piece, Position origin, Position destination)
@@ -389,11 +420,6 @@ namespace Chess.ChessGame
         {
             int line = origin.Line;
             int column = destination.Column > origin.Column ? origin.Column + 1 : origin.Column - 1;
-
-            if (column < 0 || column > Board.Columns)
-            {
-                return origin;
-            }
 
             return new Position(line, column);
         }
